@@ -6,6 +6,12 @@ import com.familybudget.budget.entity.Category;
 import java.util.List;
 
 public interface CategoryService {
-    Category addCategory(Long budgetId, CategoryRequest request);
-    List<Category> getCategories(Long budgetId);
+
+    Category addCategory(Long familyId, Long budgetId, CategoryRequest request);
+
+    List<Category> getCategories(Long familyId, Long budgetId);
+
+    Category getCategory(Long familyId, Long budgetId, Long categoryId);
+
+    Category updateCategory(Long familyId, Long budgetId, Long categoryId, CategoryRequest request);
 }

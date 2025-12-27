@@ -12,29 +12,58 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/budgets/{budgetId}/categories")
+@RequestMapping("/budget/families/{familyId}/budgets/{budgetId}/categories")
 @RequiredArgsConstructor
 public class CategoryController {
 
     private final CategoryService categoryService;
 
-    // Create category inside a budget
+    // CREATE CATEGORY ---------------------------------------------------
     @PostMapping
     public ResponseEntity<CategoryResponse> createCategory(
+            @PathVariable Long familyId,
             @PathVariable Long budgetId,
             @RequestBody CategoryRequest request
     ) {
-        Category created = categoryService.addCategory(budgetId, request);
+        Category created = categoryService.addCategory(familyId, budgetId, request);
         return ResponseEntity.ok(new CategoryResponse(created));
     }
 
-    // Get all categories for a budget
+    // GET ALL CATEGORIES ------------------------------------------------
     @GetMapping
-    public ResponseEntity<List<CategoryResponse>> getCategories(@PathVariable Long budgetId) {
-        List<Category> categories = categoryService.getCategories(budgetId);
+    public ResponseEntity<List<CategoryResponse>> getCategories(
+            @PathVariable Long familyId,
+            @PathVariable Long budgetId
+    ) {
+        List<Category> categories = categoryService.getCategories(familyId, budgetId);
+
         List<CategoryResponse> response = categories.stream()
                 .map(CategoryResponse::new)
                 .collect(Collectors.toList());
+
         return ResponseEntity.ok(response);
+    }
+
+    // GET ONE CATEGORY --------------------------------------------------
+    @GetMapping("/{categoryId}")
+    public ResponseEntity<CategoryResponse> getCategory(
+            @PathVariable Long familyId,
+            @PathVariable Long budgetId,
+            @PathVariable Long categoryId
+    ) {
+        Category category = categoryService.getCategory(familyId, budgetId, categoryId);
+        return ResponseEntity.ok(new CategoryResponse(category));
+    }
+
+    // UPDATE ONE CATEGORY ----------------------------------------------
+    @PutMapping("/{categoryId}")
+    public ResponseEntity<CategoryResponse> updateCategory(
+            @PathVariable Long familyId,
+            @PathVariable Long budgetId,
+            @PathVariable Long categoryId,
+            @RequestBody CategoryRequest request
+    ) {
+        Category updated = categoryService.updateCategory(familyId, budgetId, categoryId, request);
+        return ResponseEntity.ok(new CategoryResponse(updated));
     }
 }

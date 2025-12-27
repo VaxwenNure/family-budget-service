@@ -11,4 +11,5 @@ public class TransactionRequest {
     private BigDecimal amount;
     private String description;
     private LocalDate date;
+
 }

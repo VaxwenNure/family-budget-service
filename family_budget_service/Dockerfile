@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jdk
 WORKDIR /app
 COPY target/family-budget-service-1.0.0.jar app.jar
 EXPOSE 8080

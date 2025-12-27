@@ -6,13 +6,19 @@ import com.familybudget.budget.entity.Category;
 import com.familybudget.budget.entity.Transaction;
 import com.familybudget.budget.exception.BudgetNotFoundException;
 import com.familybudget.budget.exception.CategoryNotFoundException;
+import com.familybudget.budget.exception.FamilyNotFoundException;
+import com.familybudget.budget.exception.TransactionNotFoundException;
 import com.familybudget.budget.repository.BudgetRepository;
 import com.familybudget.budget.repository.CategoryRepository;
+import com.familybudget.budget.repository.FamilyRepository;
 import com.familybudget.budget.repository.TransactionRepository;
 import com.familybudget.budget.services.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,43 +28,105 @@ public class TransactionServiceImpl implements TransactionService {
     private final BudgetRepository budgetRepository;
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
+    private final FamilyRepository familyRepository;
 
     @Override
-    public Transaction addTransaction(Long budgetId, Long categoryId, TransactionRequest request) {
+    public Transaction addTransaction(Long familyId, Long budgetId, Long categoryId, TransactionRequest request) {
+
+        familyRepository.findById(familyId)
+                .orElseThrow(() -> new FamilyNotFoundException(familyId));
 
         Budget budget = budgetRepository.findById(budgetId)
                 .orElseThrow(() -> new BudgetNotFoundException(budgetId));
 
+        if (budget.getFamily() == null || !budget.getFamily().getId().equals(familyId)) {
+            throw new RuntimeException("Budget does not belong to this family");
+        }
+
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
 
-        if (!category.getBudget().getId().equals(budgetId)) {
+        if (category.getBudget() == null || !category.getBudget().getId().equals(budgetId)) {
             throw new RuntimeException("Category does not belong to this budget");
         }
 
-        Transaction transaction = new Transaction();
-        transaction.setAmount(request.getAmount());
-        transaction.setDescription(request.getDescription());
-        transaction.setDate(request.getDate());
-        transaction.setCategory(category);
+        BigDecimal amount = request.getAmount() == null ? BigDecimal.ZERO : request.getAmount();
+
+        Transaction transaction = Transaction.builder()
+                .amount(amount)
+                .description(request.getDescription())
+                .date(request.getDate())
+                .category(category)
+                .build();
 
         // Update spent
-        category.setSpent(category.getSpent().add(request.getAmount()));
-        budget.setSpent(budget.getSpent().add(request.getAmount()));
+        category.setSpent(category.getSpent().add(amount));
+        budget.setSpent(budget.getSpent().add(amount));
 
         return transactionRepository.save(transaction);
     }
 
     @Override
-    public List<Transaction> getTransactions(Long budgetId, Long categoryId) {
+    @Transactional(readOnly = true)
+    public List<Transaction> getTransactions(Long familyId, Long budgetId, Long categoryId) {
+
+        Budget budget = budgetRepository.findById(budgetId)
+                .orElseThrow(() -> new BudgetNotFoundException(budgetId));
+
+        if (budget.getFamily() == null || !budget.getFamily().getId().equals(familyId)) {
+            throw new RuntimeException("Budget does not belong to this family");
+        }
 
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
 
-        if (!category.getBudget().getId().equals(budgetId)) {
+        if (category.getBudget() == null || !category.getBudget().getId().equals(budgetId)) {
             throw new RuntimeException("Category does not belong to this budget");
         }
 
-        return category.getTransactions();
+        return new ArrayList<>(category.getTransactions());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Transaction getTransaction(Long familyId, Long budgetId, Long categoryId, Long transactionId) {
+        // Strict: transaction must belong to category -> budget -> family
+        return transactionRepository
+                .findByIdAndCategoryIdAndCategoryBudgetIdAndCategoryBudgetFamilyId(transactionId, categoryId, budgetId, familyId)
+                .orElseThrow(() -> new TransactionNotFoundException(transactionId));
+    }
+
+    @Override
+    public Transaction updateTransaction(Long familyId, Long budgetId, Long categoryId, Long transactionId, TransactionRequest request) {
+
+        Transaction transaction = transactionRepository
+                .findByIdAndCategoryIdAndCategoryBudgetIdAndCategoryBudgetFamilyId(transactionId, categoryId, budgetId, familyId)
+                .orElseThrow(() -> new TransactionNotFoundException(transactionId));
+
+        Category category = transaction.getCategory();
+        Budget budget = category.getBudget();
+
+        // If amount changes, adjust spent by delta
+        if (request.getAmount() != null) {
+            BigDecimal oldAmount = transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount();
+            BigDecimal newAmount = request.getAmount();
+
+            BigDecimal delta = newAmount.subtract(oldAmount);
+
+            category.setSpent(category.getSpent().add(delta));
+            budget.setSpent(budget.getSpent().add(delta));
+
+            transaction.setAmount(newAmount);
+        }
+
+        if (request.getDescription() != null) {
+            transaction.setDescription(request.getDescription());
+        }
+
+        if (request.getDate() != null) {
+            transaction.setDate(request.getDate());
+        }
+
+        return transactionRepository.save(transaction);
     }
 }

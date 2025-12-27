@@ -16,10 +16,7 @@ public class BudgetResponse {
     public BudgetResponse(Budget budget) {
         this.id = budget.getId();
         this.name = budget.getName();
-        this.limitAmount = budget.getLimitAmount();   // FIXED
+        this.limitAmount = budget.getLimitAmount();
         this.spent = budget.getSpent();
-    }
-
-    public BudgetResponse() {
     }
 }

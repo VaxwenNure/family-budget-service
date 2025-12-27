@@ -7,9 +7,11 @@ import java.util.List;
 
 public interface BudgetService {
 
-    Budget createBudget(BudgetRequest request);
+    Budget createBudget(Long familyId, BudgetRequest request);
 
-    List<Budget> getAllBudgets();
+    List<Budget> getAllBudgets(Long familyId);
 
-    Budget getBudget(Long id);
+    Budget getBudget(Long familyId, Long id);
+
+    Budget updateBudget(Long familyId, Long id, BudgetRequest request);
 }

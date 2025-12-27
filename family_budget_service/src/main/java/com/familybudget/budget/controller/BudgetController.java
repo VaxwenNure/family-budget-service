@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/budgets")
+@RequestMapping("/budget/families/{familyId}/budgets")
 @RequiredArgsConstructor
 public class BudgetController {
 
@@ -20,15 +20,16 @@ public class BudgetController {
 
     // CREATE BUDGET -----------------------------------------------------
     @PostMapping
-    public ResponseEntity<BudgetResponse> createBudget(@RequestBody BudgetRequest request) {
-        Budget created = budgetService.createBudget(request);
+    public ResponseEntity<BudgetResponse> createBudget(@PathVariable Long familyId,
+                                                       @RequestBody BudgetRequest request) {
+        Budget created = budgetService.createBudget(familyId, request);
         return ResponseEntity.ok(new BudgetResponse(created));
     }
 
-    // GET ALL BUDGETS ---------------------------------------------------
+    // GET ALL BUDGETS (FOR FAMILY) -------------------------------------
     @GetMapping
-    public ResponseEntity<List<BudgetResponse>> getAllBudgets() {
-        List<Budget> budgets = budgetService.getAllBudgets();
+    public ResponseEntity<List<BudgetResponse>> getAllBudgets(@PathVariable Long familyId) {
+        List<Budget> budgets = budgetService.getAllBudgets(familyId);
 
         List<BudgetResponse> responses = budgets.stream()
                 .map(BudgetResponse::new)
@@ -37,10 +38,20 @@ public class BudgetController {
         return ResponseEntity.ok(responses);
     }
 
-    // GET ONE BUDGET ----------------------------------------------------
+    // GET ONE BUDGET (FOR FAMILY) --------------------------------------
     @GetMapping("/{id}")
-    public ResponseEntity<BudgetResponse> getBudget(@PathVariable Long id) {
-        Budget budget = budgetService.getBudget(id);
+    public ResponseEntity<BudgetResponse> getBudget(@PathVariable Long familyId,
+                                                    @PathVariable Long id) {
+        Budget budget = budgetService.getBudget(familyId, id);
         return ResponseEntity.ok(new BudgetResponse(budget));
+    }
+
+    // UPDATE BUDGET -----------------------------------------------------
+    @PutMapping("/{id}")
+    public ResponseEntity<BudgetResponse> updateBudget(@PathVariable Long familyId,
+                                                       @PathVariable Long id,
+                                                       @RequestBody BudgetRequest request) {
+        Budget updated = budgetService.updateBudget(familyId, id, request);
+        return ResponseEntity.ok(new BudgetResponse(updated));
     }
 }

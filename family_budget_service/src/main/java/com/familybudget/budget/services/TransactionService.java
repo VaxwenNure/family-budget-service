@@ -7,7 +7,11 @@ import java.util.List;
 
 public interface TransactionService {
 
-    Transaction addTransaction(Long budgetId, Long categoryId, TransactionRequest request);
+    Transaction addTransaction(Long familyId, Long budgetId, Long categoryId, TransactionRequest request);
 
-    List<Transaction> getTransactions(Long budgetId, Long categoryId);
+    List<Transaction> getTransactions(Long familyId, Long budgetId, Long categoryId);
+
+    Transaction getTransaction(Long familyId, Long budgetId, Long categoryId, Long transactionId);
+
+    Transaction updateTransaction(Long familyId, Long budgetId, Long categoryId, Long transactionId, TransactionRequest request);
 }

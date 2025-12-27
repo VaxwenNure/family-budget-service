@@ -1,23 +1,31 @@
 package com.familybudget.budget.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String name;
 
+    @Column(name = "color")
+    private String color;
+
+    @Builder.Default
     private BigDecimal spent = BigDecimal.ZERO;
 
     @ManyToOne
@@ -25,6 +33,6 @@ public class Category {
     private Budget budget;
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @Builder.Default
     private List<Transaction> transactions = new ArrayList<>();
 }
