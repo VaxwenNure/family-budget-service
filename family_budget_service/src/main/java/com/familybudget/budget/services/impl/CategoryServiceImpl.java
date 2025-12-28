@@ -6,6 +6,9 @@ import com.familybudget.budget.entity.Category;
 import com.familybudget.budget.exception.BudgetNotFoundException;
 import com.familybudget.budget.exception.CategoryNotFoundException;
 import com.familybudget.budget.exception.FamilyNotFoundException;
+import com.familybudget.budget.messaging.dto.CategoryCreatedEvent;
+import com.familybudget.budget.messaging.dto.CategoryUpdatedEvent;
+import com.familybudget.budget.messaging.publisher.DomainEventPublisher;
 import com.familybudget.budget.repository.BudgetRepository;
 import com.familybudget.budget.repository.CategoryRepository;
 import com.familybudget.budget.repository.FamilyRepository;
@@ -14,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -23,6 +27,7 @@ public class CategoryServiceImpl implements CategoryService {
     private final BudgetRepository budgetRepository;
     private final CategoryRepository categoryRepository;
     private final FamilyRepository familyRepository;
+    private final DomainEventPublisher publisher;
 
     @Override
     public Category addCategory(Long familyId, Long budgetId, CategoryRequest request) {
@@ -34,10 +39,24 @@ public class CategoryServiceImpl implements CategoryService {
 
         Category category = new Category();
         category.setName(request.getName());
-        category.setColor(request.getColor()); // NEW
+        category.setColor(request.getColor());
         category.setBudget(budget);
 
-        return categoryRepository.save(category);
+        Category saved = categoryRepository.save(category);
+
+        publisher.publish(
+                "category.created",
+                new CategoryCreatedEvent(
+                        familyId,
+                        budgetId,
+                        saved.getId(),
+                        saved.getName(),
+                        saved.getColor(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 
     @Override
@@ -70,12 +89,24 @@ public class CategoryServiceImpl implements CategoryService {
         if (request.getName() != null) {
             category.setName(request.getName());
         }
-
-
         if (request.getColor() != null) {
             category.setColor(request.getColor());
         }
 
-        return categoryRepository.save(category);
+        Category saved = categoryRepository.save(category);
+
+        publisher.publish(
+                "category.updated",
+                new CategoryUpdatedEvent(
+                        familyId,
+                        budgetId,
+                        saved.getId(),
+                        saved.getName(),
+                        saved.getColor(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 }

@@ -8,6 +8,9 @@ import com.familybudget.budget.exception.BudgetNotFoundException;
 import com.familybudget.budget.exception.CategoryNotFoundException;
 import com.familybudget.budget.exception.FamilyNotFoundException;
 import com.familybudget.budget.exception.TransactionNotFoundException;
+import com.familybudget.budget.messaging.dto.TransactionCreatedEvent;
+import com.familybudget.budget.messaging.dto.TransactionUpdatedEvent;
+import com.familybudget.budget.messaging.publisher.DomainEventPublisher;
 import com.familybudget.budget.repository.BudgetRepository;
 import com.familybudget.budget.repository.CategoryRepository;
 import com.familybudget.budget.repository.FamilyRepository;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +33,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
     private final FamilyRepository familyRepository;
+    private final DomainEventPublisher publisher;
 
     @Override
     public Transaction addTransaction(Long familyId, Long budgetId, Long categoryId, TransactionRequest request) {
@@ -63,7 +68,23 @@ public class TransactionServiceImpl implements TransactionService {
         category.setSpent(category.getSpent().add(amount));
         budget.setSpent(budget.getSpent().add(amount));
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+
+        publisher.publish(
+                "transaction.created",
+                new TransactionCreatedEvent(
+                        familyId,
+                        budgetId,
+                        categoryId,
+                        saved.getId(),
+                        saved.getAmount(),
+                        saved.getDescription(),
+                        saved.getDate(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 
     @Override
@@ -90,7 +111,6 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional(readOnly = true)
     public Transaction getTransaction(Long familyId, Long budgetId, Long categoryId, Long transactionId) {
-        // Strict: transaction must belong to category -> budget -> family
         return transactionRepository
                 .findByIdAndCategoryIdAndCategoryBudgetIdAndCategoryBudgetFamilyId(transactionId, categoryId, budgetId, familyId)
                 .orElseThrow(() -> new TransactionNotFoundException(transactionId));
@@ -106,7 +126,6 @@ public class TransactionServiceImpl implements TransactionService {
         Category category = transaction.getCategory();
         Budget budget = category.getBudget();
 
-        // If amount changes, adjust spent by delta
         if (request.getAmount() != null) {
             BigDecimal oldAmount = transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount();
             BigDecimal newAmount = request.getAmount();
@@ -127,6 +146,22 @@ public class TransactionServiceImpl implements TransactionService {
             transaction.setDate(request.getDate());
         }
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+
+        publisher.publish(
+                "transaction.updated",
+                new TransactionUpdatedEvent(
+                        familyId,
+                        budgetId,
+                        category.getId(),
+                        saved.getId(),
+                        saved.getAmount(),
+                        saved.getDescription(),
+                        saved.getDate(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 }

@@ -3,11 +3,15 @@ package com.familybudget.budget.services.impl;
 import com.familybudget.budget.dto.request.FamilyRequest;
 import com.familybudget.budget.entity.Family;
 import com.familybudget.budget.exception.FamilyNotFoundException;
+import com.familybudget.budget.messaging.dto.FamilyCreatedEvent;
+import com.familybudget.budget.messaging.dto.FamilyUpdatedEvent;
+import com.familybudget.budget.messaging.publisher.DomainEventPublisher;
 import com.familybudget.budget.repository.FamilyRepository;
 import com.familybudget.budget.services.FamilyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -16,16 +20,27 @@ import java.util.List;
 public class FamilyServiceImpl implements FamilyService {
 
     private final FamilyRepository familyRepository;
-
+    private final DomainEventPublisher publisher;
 
     @Override
     public Family createFamily(FamilyRequest request) {
         Family family = new Family();
         family.setType(request.getType());
-
         family.setCreatedAt(LocalDateTime.now());
 
-        return familyRepository.save(family);
+        Family saved = familyRepository.save(family);
+
+        publisher.publish(
+                "family.created",
+                new FamilyCreatedEvent(
+                        saved.getId(),
+                        saved.getType(),
+                        saved.getCreatedAt().toString(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 
     @Override
@@ -48,6 +63,18 @@ public class FamilyServiceImpl implements FamilyService {
             family.setType(request.getType());
         }
 
-        return familyRepository.save(family);
+        Family saved = familyRepository.save(family);
+
+        publisher.publish(
+                "family.updated",
+                new FamilyUpdatedEvent(
+                        saved.getId(),
+                        saved.getType(),
+                        saved.getCreatedAt().toString(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 }

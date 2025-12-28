@@ -5,13 +5,16 @@ import com.familybudget.budget.entity.Family;
 import com.familybudget.budget.entity.Salary;
 import com.familybudget.budget.exception.FamilyNotFoundException;
 import com.familybudget.budget.exception.SalaryNotFoundException;
+import com.familybudget.budget.messaging.dto.SalaryCreatedEvent;
+import com.familybudget.budget.messaging.dto.SalaryUpdatedEvent;
+import com.familybudget.budget.messaging.publisher.DomainEventPublisher;
 import com.familybudget.budget.repository.FamilyRepository;
 import com.familybudget.budget.repository.SalaryRepository;
 import com.familybudget.budget.services.SalaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -20,6 +23,7 @@ public class SalaryServiceImpl implements SalaryService {
 
     private final SalaryRepository salaryRepository;
     private final FamilyRepository familyRepository;
+    private final DomainEventPublisher publisher;
 
     @Override
     public Salary createSalary(Long familyId, SalaryRequest request) {
@@ -34,7 +38,22 @@ public class SalaryServiceImpl implements SalaryService {
                 .source(request.getSource())
                 .build();
 
-        return salaryRepository.save(salary);
+        Salary saved = salaryRepository.save(salary);
+
+        publisher.publish(
+                "salary.created",
+                new SalaryCreatedEvent(
+                        familyId,
+                        saved.getId(),
+                        saved.getAmount(),
+                        saved.getCurrency(),
+                        saved.getReceivedAt(),
+                        saved.getSource(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 
     @Override
@@ -65,19 +84,31 @@ public class SalaryServiceImpl implements SalaryService {
         if (request.getAmount() != null) {
             salary.setAmount(request.getAmount());
         }
-
         if (request.getCurrency() != null) {
             salary.setCurrency(request.getCurrency());
         }
-
         if (request.getReceivedAt() != null) {
             salary.setReceivedAt(request.getReceivedAt());
         }
-
         if (request.getSource() != null) {
             salary.setSource(request.getSource());
         }
 
-        return salaryRepository.save(salary);
+        Salary saved = salaryRepository.save(salary);
+
+        publisher.publish(
+                "salary.updated",
+                new SalaryUpdatedEvent(
+                        familyId,
+                        saved.getId(),
+                        saved.getAmount(),
+                        saved.getCurrency(),
+                        saved.getReceivedAt(),
+                        saved.getSource(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 }

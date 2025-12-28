@@ -5,12 +5,16 @@ import com.familybudget.budget.entity.Budget;
 import com.familybudget.budget.entity.Family;
 import com.familybudget.budget.exception.BudgetNotFoundException;
 import com.familybudget.budget.exception.FamilyNotFoundException;
+import com.familybudget.budget.messaging.dto.BudgetCreatedEvent;
+import com.familybudget.budget.messaging.dto.BudgetUpdatedEvent;
+import com.familybudget.budget.messaging.publisher.DomainEventPublisher;
 import com.familybudget.budget.repository.BudgetRepository;
 import com.familybudget.budget.repository.FamilyRepository;
 import com.familybudget.budget.services.BudgetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -19,6 +23,7 @@ public class BudgetServiceImpl implements BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final FamilyRepository familyRepository;
+    private final DomainEventPublisher publisher;
 
     @Override
     public Budget createBudget(Long familyId, BudgetRequest request) {
@@ -30,40 +35,47 @@ public class BudgetServiceImpl implements BudgetService {
         budget.setLimitAmount(request.getLimitAmount());
         budget.setFamily(family);
 
-        return budgetRepository.save(budget);
+        Budget saved = budgetRepository.save(budget);
+
+        publisher.publish(
+                "budget.created",
+                new BudgetCreatedEvent(
+                        familyId,
+                        saved.getId(),
+                        saved.getName(),
+                        saved.getLimitAmount(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 
     @Override
     public List<Budget> getAllBudgets(Long familyId) {
-        // Ensure family exists (so you return 404 if familyId is wrong)
         familyRepository.findById(familyId)
                 .orElseThrow(() -> new FamilyNotFoundException(familyId));
 
-        // Only budgets for this family
         return budgetRepository.findByFamilyId(familyId);
     }
 
     @Override
     public Budget getBudget(Long familyId, Long id) {
-        // Ensure family exists
         familyRepository.findById(familyId)
                 .orElseThrow(() -> new FamilyNotFoundException(familyId));
 
-        // Only return if budget belongs to this family
         return budgetRepository.findByIdAndFamilyId(id, familyId)
                 .orElseThrow(() -> new BudgetNotFoundException(id));
     }
 
     @Override
     public Budget updateBudget(Long familyId, Long id, BudgetRequest request) {
-        // Ensure family exists
         familyRepository.findById(familyId)
                 .orElseThrow(() -> new FamilyNotFoundException(familyId));
 
         Budget budget = budgetRepository.findByIdAndFamilyId(id, familyId)
                 .orElseThrow(() -> new BudgetNotFoundException(id));
 
-        // Update only provided fields (safe partial update behavior)
         if (request.getName() != null) {
             budget.setName(request.getName());
         }
@@ -71,6 +83,19 @@ public class BudgetServiceImpl implements BudgetService {
             budget.setLimitAmount(request.getLimitAmount());
         }
 
-        return budgetRepository.save(budget);
+        Budget saved = budgetRepository.save(budget);
+
+        publisher.publish(
+                "budget.updated",
+                new BudgetUpdatedEvent(
+                        familyId,
+                        saved.getId(),
+                        saved.getName(),
+                        saved.getLimitAmount(),
+                        Instant.now()
+                )
+        );
+
+        return saved;
     }
 }

@@ -6,6 +6,9 @@ import com.familybudget.budget.entity.Family;
 import com.familybudget.budget.entity.FamilyMember;
 import com.familybudget.budget.exception.FamilyMemberNotFoundException;
 import com.familybudget.budget.exception.FamilyNotFoundException;
+import com.familybudget.budget.messaging.dto.FamilyMemberCreatedEvent;
+import com.familybudget.budget.messaging.dto.FamilyMemberUpdatedEvent;
+import com.familybudget.budget.messaging.publisher.DomainEventPublisher;
 import com.familybudget.budget.repository.FamilyMemberRepository;
 import com.familybudget.budget.repository.FamilyRepository;
 import com.familybudget.budget.services.FamilyMemberService;
@@ -13,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -21,6 +25,7 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
 
     private final FamilyRepository familyRepository;
     private final FamilyMemberRepository familyMemberRepository;
+    private final DomainEventPublisher publisher;
 
     @Override
     @Transactional
@@ -36,6 +41,16 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
                 .build();
 
         FamilyMember saved = familyMemberRepository.save(member);
+
+        publisher.publish(
+                "familyMember.created",
+                new FamilyMemberCreatedEvent(
+                        familyId,
+                        saved.getId(),
+                        saved.getRole(),
+                        Instant.now()
+                )
+        );
 
         FamilyMemberResponse response = new FamilyMemberResponse();
         response.setId(saved.getId());
@@ -61,7 +76,6 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
         }).toList();
     }
 
-    // NEW -----------------------------------------------------
     @Override
     @Transactional(readOnly = true)
     public FamilyMemberResponse getFamilyMemberById(Long familyId, Long memberId) {
@@ -99,6 +113,17 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
         }
 
         FamilyMember saved = familyMemberRepository.save(member);
+
+
+        publisher.publish(
+                "familyMember.updated",
+                new FamilyMemberUpdatedEvent(
+                        familyId,
+                        saved.getId(),
+                        saved.getRole(),
+                        Instant.now()
+                )
+        );
 
         FamilyMemberResponse response = new FamilyMemberResponse();
         response.setId(saved.getId());
