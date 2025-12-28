@@ -30,4 +30,23 @@ public class FamilyMemberController {
     ) {
         return ResponseEntity.ok(familyMemberService.getFamilyMembers(familyId));
     }
+
+    // NEW: GET ONE MEMBER
+    @GetMapping("/{memberId}")
+    public ResponseEntity<FamilyMemberResponse> getMemberById(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId
+    ) {
+        return ResponseEntity.ok(familyMemberService.getFamilyMemberById(familyId, memberId));
+    }
+
+    // NEW: UPDATE MEMBER
+    @PutMapping("/{memberId}")
+    public ResponseEntity<FamilyMemberResponse> updateMember(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            @RequestBody FamilyMemberRequest request
+    ) {
+        return ResponseEntity.ok(familyMemberService.updateFamilyMember(familyId, memberId, request));
+    }
 }

@@ -6,6 +6,12 @@ import com.familybudget.budget.dto.response.FamilyMemberResponse;
 import java.util.List;
 
 public interface FamilyMemberService {
+
     FamilyMemberResponse addFamilyMember(Long familyId, FamilyMemberRequest request);
+
     List<FamilyMemberResponse> getFamilyMembers(Long familyId);
+
+    FamilyMemberResponse getFamilyMemberById(Long familyId, Long memberId);
+
+    FamilyMemberResponse updateFamilyMember(Long familyId, Long memberId, FamilyMemberRequest request);
 }

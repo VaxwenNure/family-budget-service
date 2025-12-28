@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface FamilyService {
 
+    Family createFamily(FamilyRequest request);
+    
     List<Family> getAllFamilies();
 
     Family getFamilyById(Long familyId);

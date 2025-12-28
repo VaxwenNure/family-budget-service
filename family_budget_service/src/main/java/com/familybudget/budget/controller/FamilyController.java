@@ -18,6 +18,13 @@ public class FamilyController {
 
     private final FamilyService familyService;
 
+
+    @PostMapping
+    public ResponseEntity<FamilyResponse> createFamily(@RequestBody FamilyRequest request) {
+        Family created = familyService.createFamily(request);
+        return ResponseEntity.ok(new FamilyResponse(created));
+    }
+
     // GET ALL FAMILIES ----------------------------------------------
     @GetMapping
     public ResponseEntity<List<FamilyResponse>> getAllFamilies() {

@@ -9,6 +9,6 @@ import java.time.LocalDateTime;
 public class SalaryRequest {
     private BigDecimal amount;
     private String currency;
-    private String source;
     private LocalDateTime receivedAt;
+    private String source;
 }

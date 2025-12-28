@@ -8,6 +8,7 @@ import com.familybudget.budget.services.FamilyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -15,6 +16,17 @@ import java.util.List;
 public class FamilyServiceImpl implements FamilyService {
 
     private final FamilyRepository familyRepository;
+
+
+    @Override
+    public Family createFamily(FamilyRequest request) {
+        Family family = new Family();
+        family.setType(request.getType());
+
+        family.setCreatedAt(LocalDateTime.now());
+
+        return familyRepository.save(family);
+    }
 
     @Override
     public List<Family> getAllFamilies() {
